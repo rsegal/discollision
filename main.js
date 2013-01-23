@@ -11,17 +11,36 @@ var collision = function (discA,discB) {
 
 }
 
+/*var circle(ctx,cx,cy,radius) {
+	ctx.arc(cx,cy,radius,0,2*Math.PI, true);
+}
+
+var drawDisc = function(disc) {
+
+	ctx.beginPath();
+	var cx = 200;
+	var cy = 200;
+	var radius = 100;
+	circle(ctx, cx, cy, radius);
+	ctx.fill();
+}*/
+
 var updater = function () {
 	intervalCounter++;
 	if (keyboard[37]===1) ax-=0.7; //we should probably change the amount of increment according to the current value of ax and ay because it's weird to control like that
 	if (keyboard[39]===1) ax+=0.7;
 	if (keyboard[40]===1) ay+=0.7;
 	if (keyboard[38]===1) ay-=0.7;
+	
 	vx+=ax;	//accelerations
 	vy+=ay;
+	//calculations before clearing the picture
+	
 	ctx.clearRect(0, 0, canvas.width, canvas.height);
 	ctx.fillStyle = "#0000FF";
 	ctx.fillRect((vx )% canvas.width,vy % canvas.height,50,50); //not a proper handling of location, temporary
+	//drawDisc(disc1);
+	//drawDisc(disc2);
 	
 	
 }
