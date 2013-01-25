@@ -81,26 +81,8 @@ var drawPointer = function (cx,cy,x,y,self,enemy) {
     dbPrint(angle);
     ctx.save();
     ctx.translate(cx,cy);
-/*    ctx.transform(Math.cos(angle),-Math.sin(angle),Math.sin(angle),
-		  Math.cos(angle));*/
     ctx.rotate(angle);
     drawArrow(x,y);
-    
-    ctx.beginPath();
-    ctx.moveTo(x,y);
-    ctx.lineTo(x + 40,y+25);
-    ctx.lineTo(x + 15,y + 25);
-    ctx.lineTo(x + 15,y + 75);
-    ctx.lineTo(x - 15,y + 75);
-    ctx.lineTo(x - 15,y + 25);
-    ctx.lineTo(x - 40,y + 25);
-    ctx.closePath();
-    ctx.strokeStyle="#FF0000"
-    ctx.stroke();
-    ctx.fillStyle="#FF0000"
-    ctx.fill();
-    
-    //ctx.setTransform();
     ctx.rotate(-angle);
     ctx.translate(-cx,-cy);
 }
