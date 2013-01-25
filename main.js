@@ -9,7 +9,7 @@ var player = function(initX,initY,size,playerID) {
     this.y = initY;
     this.vX = 0;
     this.vY = 0;
-    this.a = 0.7;
+    this.a = 0.5;
     this.radius=size;
     this.ID=playerID;
 	//console.log(this);
@@ -61,39 +61,21 @@ var drawDisc = function(locX,locY,radius) {
 
 var updater = function() {
     dbPrint(intervalCounter++);
-    var len = keys.length;
-    dbPrint(len);
-    var key;
-    for(var i = 0; i < len; i++) {
-	dbPrint(i);
-	key = keys.pop();
-	dbPrint(key);
-	switch (key) {
-	case 37: // Left Arrow
-	    B.vX -= B.a;
-	    break;
-	case 38: // Up Arrow
-	    B.vY -= B.a;
-	    break;
-	case 39: // Right Arrow
-	    B.vX += B.a;
-	    break;
-	case 40: // Down Arrow
-	    B.vY += B.a;
-	    break;
-	case 65: // A Key
-	    A.vX -= A.a;
-	    break;
-	case 68: // D Key
-	    A.vX += A.a;
-	    break;
-	case 83: // S Key
-	    A.vY += A.a;
-	    break;
-	case 87: // W Key
-	    A.vY -= A.a;
-	}
-    }
+    dbPrint(keys);
+    // Caution, keyboard checks use falsy checking of relevnt keys!
+
+    // A's movement
+    if (keys[65]) {A.vX -= A.a} // A Key
+    if (keys[68]) {A.vX += A.a} // D Key
+    if (keys[83]) {A.vY += A.a} // S Key
+    if (keys[87]) {A.vY -= A.a} // W Key
+
+    // B's movement
+    if (keys[37]) {B.vX -= B.a} // Left Arrow
+    if (keys[38]) {B.vY -= B.a} // Up Arrow
+    if (keys[39]) {B.vX += B.a} // Right Arrow
+    if (keys[40]) {B.vY += B.a} // Down Arrow
+
     A.x+=A.vX;
     A.y+=A.vY;
     B.x+=B.vX;
@@ -120,7 +102,7 @@ var updater = function() {
     drawEnemy(A,B,300,300);
     drawEnemy(B,A,900,300);
 
-    // Draw borders
+    // Draw borders and cover any enemy overlap
     ctx.strokeRect(50, 50, 500, 500);
     ctx.strokeRect(650, 50, 500, 500);
     
@@ -131,14 +113,14 @@ var updater = function() {
 }
 
 function onKeyDown(event) {
-    keys.push(event.keyCode);	
-    console.log(keys);
+    keys[event.keyCode] = 1;	
+    dbPrint(keys);
 }
-/*
+
 function onKeyUp(event) {
-	keys[event.keyCode]=0;	
-	//console.log(keys);
-}*/
+    keys[event.keyCode] = 0;
+    dbPrint(keys);
+}
 
 
 function main() {
@@ -147,9 +129,10 @@ function main() {
     ctx = canvas.getContext("2d");
     intervalCounter = 0;
 
-    keys = new Array;
+    keys = new Object;
 
     canvas.addEventListener('keydown',onKeyDown,false);
+    canvas.addEventListener('keyup',onKeyUp,false);
     canvas.setAttribute('tabindex','0');
     canvas.focus();
 
