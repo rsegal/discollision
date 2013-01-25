@@ -31,11 +31,23 @@ var drawEnemy = function(myShip,eShip,centerX,centerY) {
 }
 
 var doCollision = function (discA,discB) {
-
+    var angle=Math.atan((discA.y-discB.y)/(discA.x-discB.x));
+    var discAtan=discA.vX*Math.sin(angle)-discA.vY*Math.cos(angle);
+    var discAper=discA.vX*Math.cos(angle)+discA.vY*Math.sin(angle);
+    var discBtan=discB.vX*Math.sin(angle)-discB.vY*Math.cos(angle);
+    var discBper=discB.vX*Math.cos(angle)+discB.vY*Math.sin(angle);
+    var temp=discAper;
+    discAper=discBper;
+    discBper=temp;
+    discA.vX=discAper*Math.cos(angle)+discAtan*Math.sin(angle);
+    discA.vY=discAper*Math.sin(angle)-discAtan*Math.cos(angle);
+    discB.vX=discBper*Math.cos(angle)+discBtan*Math.sin(angle);
+    discB.vY=discBper*Math.sin(angle)-discBtan*Math.cos(angle);
 }
 
 var checkCollision = function (discA,discB) {
-
+    var d=Math.sqrt(Math.pow(discA.x-discB.x,2)+Math.pow(discA.y-discB.y,2));
+    if (d<=(discA.radius+discB.radius)) doCollision(discA,discB);
 }
 
 var checkWallCollision = function (disc) {
@@ -45,8 +57,52 @@ var checkWallCollision = function (disc) {
 	if (disc.y+disc.radius >= 3000) {disc.vY=-disc.vY; }
 }
 
-var drawPointer = function (locX,locY,discA,discB) {
+var drawArrow = function (x,y) {
+    ctx.beginPath();
+    ctx.moveTo(x,y);
+    ctx.lineTo(x + 40,y+25);
+    ctx.lineTo(x + 15,y + 25);
+    ctx.lineTo(x + 15,y + 75);
+    ctx.lineTo(x - 15,y + 75);
+    ctx.lineTo(x - 15,y + 25);
+    ctx.lineTo(x - 40,y + 25);
+    ctx.closePath();
+    ctx.strokeStyle="#FF0000"
+    ctx.stroke();
+    ctx.fillStyle="#FF0000"
+    ctx.fill();
+}
 
+var drawPointer = function (cx,cy,x,y,self,enemy) {
+    dbPrint("Drawing " + self.ID + "'s Pointer")
+    var dx = self.x - enemy.x;
+    var dy = self.y - enemy.y;
+    var angle = Math.atan2(dx,-dy);
+    dbPrint(angle);
+    ctx.save();
+    ctx.translate(cx,cy);
+/*    ctx.transform(Math.cos(angle),-Math.sin(angle),Math.sin(angle),
+		  Math.cos(angle));*/
+    ctx.rotate(angle);
+    drawArrow(x,y);
+    
+    ctx.beginPath();
+    ctx.moveTo(x,y);
+    ctx.lineTo(x + 40,y+25);
+    ctx.lineTo(x + 15,y + 25);
+    ctx.lineTo(x + 15,y + 75);
+    ctx.lineTo(x - 15,y + 75);
+    ctx.lineTo(x - 15,y + 25);
+    ctx.lineTo(x - 40,y + 25);
+    ctx.closePath();
+    ctx.strokeStyle="#FF0000"
+    ctx.stroke();
+    ctx.fillStyle="#FF0000"
+    ctx.fill();
+    
+    //ctx.setTransform();
+    ctx.rotate(-angle);
+    ctx.translate(-cx,-cy);
 }
 var circle = function(cx,cy,radius) {
 	ctx.arc(cx,cy,radius,0,2*Math.PI, true);
@@ -62,7 +118,7 @@ var drawDisc = function(locX,locY,radius) {
 var updater = function() {
     dbPrint(intervalCounter++);
     dbPrint(keys);
-    // Caution, keyboard checks use falsy checking of relevnt keys!
+    // Caution, key checks use falsy checking of relevnt keys!
 
     // A's movement
     if (keys[65]) {A.vX -= A.a} // A Key
@@ -106,10 +162,12 @@ var updater = function() {
     ctx.strokeRect(50, 50, 500, 500);
     ctx.strokeRect(650, 50, 500, 500);
     
+    checkCollision(A,B);
     checkWallCollision(A);
     checkWallCollision(B);
     
-    
+    drawPointer(900,300,0,-200,A,B);
+    drawPointer(300,300,0,-200,B,A);
 }
 
 function onKeyDown(event) {
