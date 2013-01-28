@@ -4,50 +4,55 @@ function dbPrint(msg) {
     }
 }
 //var score = 
-
+var massDensity=1;
 var flag = function(initX,initY,player,enemy,color) {
     this.homeX = initX;
     this.homeY = initY;
+	this.x = initX;
+	this.y = initY;
     this.player = player;
     this.color = color;
     this.enemy = enemy;
+	this.radius = 10;
     this.stolen = false;
-    this.drawFlag = function(viewer) {
-	var x;
-	var y;
-	if (self.stolen === true) {
-	    dbPrint(this.player.ID + "'s flag is being carried at (" + this.enemy.x+ "," + this.enemy. y+ ").")
-	    x = this.enemy.x;
-	    y = this.enemy.y;
-	}
-	else {
-	    x = self.homeX;
-	    y = self.homeY;
-	}
-	dbPrint(self.homeX);
-	dbPrint(self.homeY);
-	dbPrint(this.player.ID + "'s flag is at (" + x + "," + y + ").");
-	renderX = x - viewer.x;
-	renderY = y - viewer.y;
-	dbPrint(viewer.ID + " is (" + renderX + "," + renderY + ") from " + player.ID + "'s flag.");
-	if ((Math.abs(renderX) <= 150) && (Math.abs(renderY) <= 150)) 
-	{
-	    
-	    drawDisk(viwer.x - renderX,viewer.y - renderY,5,this.color); 
-	    // make legit flag art
-	}
+    this.drawFlag = function(viewer) { //flag rendering works, do not attempt to improve! 1 hour spent fixing
+		var x;
+		var y;
+		if (this.stolen === true) {
+			x = this.enemy.x;
+			y = this.enemy.y;
+			
+		}
+		else {
+	    x = this.homeX;
+	    y = this.homeY;
+		
+		}
+		
+		var distX = x - viewer.x;
+		var distY = y - viewer.y;
+		//console.log("distX= ",distX," ; distY=",distY);
+		if (((distX)-this.radius<=250) && ((distY)-this.radius<=250) && ((distX)+this.radius>=-250) && ((distY)+this.radius>=-250)) {
+	    drawDisc(distX+viewer.viewX,distY+viewer.viewY,this.radius,this.color);
+		
+		}
+	
     }
 }
 
 var player = function(initX,initY,viewX,viewY,size,player) {
+	this.score=0;
     this.x = initX;
     this.y = initY;
+	this.homeX=initX;
+	this.homeY=initY;
     this.vX = 0;
     this.vY = 0;
     this.a = 0.5;
     this.aX = 0;
     this.aY = 0;
     this.radius=size;
+	this.mass=massDensity*Math.PI*Math.pow(this.radius,2);
     this.ID=player;
     if (this.ID === "A") { this.color = "rgb(255,0,0)"; }
     else { this.color = "rgb(0,0,255)"; }
@@ -75,24 +80,33 @@ var drawEnemy = function(myShip,eShip,centerX,centerY) {
 		}
 }
 
-var doCollision = function (discA,discB) {
+//doCollision is physically correct and returns the ID of the collision winner
+var doCollision = function (discA,discB) { 
     var angle=Math.atan((discA.y-discB.y)/(discA.x-discB.x));
+	if ((discA.x-discB.x)===0) angle=Math.PI/2; //if denominator is zero
     var discAtan=discA.vX*Math.sin(angle)-discA.vY*Math.cos(angle);
     var discAper=discA.vX*Math.cos(angle)+discA.vY*Math.sin(angle);
     var discBtan=discB.vX*Math.sin(angle)-discB.vY*Math.cos(angle);
     var discBper=discB.vX*Math.cos(angle)+discB.vY*Math.sin(angle);
-    var temp=discAper;
-    discAper=discBper;
-    discBper=temp;
+    var u1=discAper;
+    var u2=discBper;
+    discAper=(u1*(discA.mass-discB.mass)+2*discB.mass*u2)/(discA.mass+discB.mass);
+	discBper=(u2*(discB.mass-discA.mass)+2*discA.mass*u1)/(discA.mass+discB.mass);
     discA.vX=discAper*Math.cos(angle)+discAtan*Math.sin(angle);
     discA.vY=discAper*Math.sin(angle)-discAtan*Math.cos(angle);
     discB.vX=discBper*Math.cos(angle)+discBtan*Math.sin(angle);
     discB.vY=discBper*Math.sin(angle)-discBtan*Math.cos(angle);
+	//console.log(discA.ID+ " momentum: " + Math.abs(discA.mass*u1) + " ,"+discB.ID+" momentum: ", +Math.abs(discB.mass*u2));
+	if (Math.abs(discA.mass*u1)>Math.abs(discB.mass*u2)) return discA.ID;
+	if (Math.abs(discA.mass*u1)<Math.abs(discB.mass*u2)) return discB.ID;
+	
+	
 }
 
 var checkCollision = function (discA,discB) {
     var d=Math.sqrt(Math.pow(discA.x-discB.x,2)+Math.pow(discA.y-discB.y,2));
-    if (d<=(discA.radius+discB.radius)) doCollision(discA,discB);
+    if (d<=(discA.radius+discB.radius)) return doCollision(discA,discB);
+	else return "no collision";
 }
 
 var checkWallCollision = function (disc) {
@@ -156,24 +170,20 @@ var drawAcceleration = function(x,y,self) {
     {
 	ctx.drawImage(burner,0,0,20,50,x-10,y,20,50);
 	self.torch++;
-	console.log(self.torch);
     }
     else if (self.torch<8) 
     {
 	ctx.drawImage(burner,20,0,20,50,x-10,y,20,50);
 	self.torch++;
-	console.log(self.torch);
     }
     else if (((self.torch % 8) + 4) < 12) 
     {
 	ctx.drawImage(burner,40,0,20,50,x-10,y,20,50);
 	self.torch++;
-	console.log(self.torch);
     }
     else if (((self.torch % 8) + 4) < 16) {
 	ctx.drawImage(burner,60,0,20,50,x-10,y,20,50);
 	self.torch++;
-	console.log(self.torch);
     }
     else {self.torch = 8;}
     dbPrint("foo");
@@ -193,6 +203,44 @@ var drawDisc = function(locX,locY,radius,color) {
     ctx.fill();
 }
 
+var checkFlagPickUp=function(picker,pickee) {
+	var d=Math.sqrt(Math.pow(picker.x-pickee.x,2)+Math.pow(picker.y-pickee.y,2));
+	if (d<picker.radius) pickUpFlag(picker,pickee);
+}
+
+var pickUpFlag=function(picker,pickee) {
+	pickee.stolen=true;
+}
+
+var knockFlag=function(knockee) {
+	knockee.stolen=false;
+}
+
+var Base=function(player,baseEdge) {
+	this.edge=baseEdge;
+	this.x=player.homeX;
+	this.y=player.homeY;
+	this.color=player.color;
+	
+}
+var drawBase=function(onPlayer,drawnBase) {
+	//no idea why it works, thought I'm only 10% through finishing it and it works
+	ctx.fillStyle=drawnBase.color;
+	ctx.globalAlpha=0.5;
+	if ((Math.abs(onPlayer.x-drawnBase.x)<=(drawnBase.edge/2+250))&&(Math.abs(onPlayer.y-drawnBase.y)<=(drawnBase.edge/2+250))) { 
+					ctx.fillRect(onPlayer.viewX-drawnBase.edge/2-onPlayer.x+drawnBase.x,onPlayer.viewY-drawnBase.edge/2-onPlayer.y+drawnBase.y,drawnBase.edge,drawnBase.edge);
+	
+		}
+	ctx.globalAlpha=1;
+}
+
+var checkFlagDropOff=function(dropper,dropee,dropsite) { //can't get the range right, too sleepy to fix
+	if (((Math.abs(dropper.x-dropsite.x))<(dropsite.edge-dropper.radius))&&((Math.abs(dropper.y-dropsite.y))<(dropsite.edge-dropper.radius))&&(dropee.stolen)) FlagDropOff(dropper,dropee);
+}
+var FlagDropOff=function(dropper,dropee) {
+	dropee.stolen=false;
+	dropper.score++;
+}
 var updater = function() {
     dbPrint(intervalCounter++);
     dbPrint(keys);
@@ -243,26 +291,44 @@ var updater = function() {
     // Backgrounds
     drawBG(A.x,A.y,50,50);
     drawBG(B.x,B.y,650,50);
+	
+	//Bases
+	drawBase(A,BBase);
+	drawBase(B,ABase);
+	drawBase(A,ABase);
+	drawBase(B,BBase);
 
     // Players
     drawDisc(A.viewX, A.viewY , A.radius, A.color);
     drawDisc(B.viewX, B.viewY , B.radius, B.color);
 
+	// Enemies if they should be visible
+    drawEnemy(A,B,300,300);
+    drawEnemy(B,A,900,300);
+	
     // draws flags on top of players if applicable
     aF.drawFlag(A);
     aF.drawFlag(B);
     bF.drawFlag(A);
     bF.drawFlag(B);
 
-    // Enemies if they should be visible
-    drawEnemy(A,B,300,300);
-    drawEnemy(B,A,900,300);
+ 
 
     // Draw borders and cover any enemy overlap
     ctx.strokeRect(50, 50, 500, 500);
     ctx.strokeRect(650, 50, 500, 500);
-    
-    checkCollision(A,B);
+	
+	checkFlagPickUp(A,bF);
+	checkFlagPickUp(B,aF);
+	
+	checkFlagDropOff(A,bF,ABase);
+	checkFlagDropOff(B,aF,BBase);
+	
+    var collision=checkCollision(A,B);
+	if (collision!="no collision") { if ((collision===A.ID)&&(aF.stolen)) knockFlag(aF);
+									if ((collision===B.ID)&&(bF.stolen)) knockFlag(bF);
+									}
+	
     checkWallCollision(A);
     checkWallCollision(B);
     
@@ -309,6 +375,14 @@ var updater = function() {
 	}
     }
 
+	
+	//covering leaks
+	ctx.fillStyle = "#111111";
+	ctx.fillRect(0,0,1200,50);
+	ctx.fillRect(0,0,50,600);
+	ctx.fillRect(550,0,100,600);
+	ctx.fillRect(1150,0,50,600);
+	ctx.fillRect(0,550,1200,50);
 }
 
 function onKeyDown(event) {
@@ -322,9 +396,10 @@ function onKeyUp(event) {
 }
 
 function main() {
-    debugMode = true;
+    debugMode = false;
     canvas = document.getElementById("myCanvas");
     ctx = canvas.getContext("2d");
+	tempctx = canvas.getContext("2d");
     intervalCounter = 0;
 
     keys = new Object;
@@ -334,8 +409,10 @@ function main() {
     canvas.setAttribute('tabindex','0');
     canvas.focus();
 
-    A = new player(2900,100,300,300,10,1);
-    B = new player(100,2900,900,300,20,2);
+    A = new player(2900,100,300,300,10,"A");
+    B = new player(100,2900,900,300,20,"B");
+	ABase = new Base(A,100);
+	BBase = new Base(B,100);
     aF = new flag(A.x, A.y, A, B, "rgb(100, 0, 0)");
     bF = new flag(B.x, B.y, B, A, "rgb(0, 0, 100)");
     dbPrint(aF);
