@@ -4,6 +4,7 @@ function dbPrint(msg) {
     }
 }
 var massDensity=1;
+var screen=0;
 var flag = function(initX,initY,player,enemy,color) {
     this.homeX = initX;
     this.homeY = initY;
@@ -40,6 +41,7 @@ var flag = function(initX,initY,player,enemy,color) {
 }
 
 var player = function(initX,initY,viewX,viewY,size,player) {
+	this.name="Anon";
     this.score=0;
     this.x = initX;
     this.y = initY;
@@ -51,16 +53,18 @@ var player = function(initX,initY,viewX,viewY,size,player) {
     this.aX = 0;
     this.aY = 0;
     this.radius=size;
-	this.mass=massDensity*Math.PI*Math.pow(this.radius,2);
+    this.mass = massDensity*Math.PI*Math.pow(this.radius,2);
     this.ID=player;
     if (this.ID === "A") { this.color = "rgb(255,0,0)"; }
     else { this.color = "rgb(0,0,255)"; }
     this.viewX = viewX;
     this.viewY = viewY;
-    this.torch = 0;
-    // delays erasing the torch visual effect
-    this.torchShutoffCounter = 0;
-    this.torchShutoffLimit = 75; // units of 33 milliseconds
+
+    /* torch works as follows: there are four frames in the animation. Each plays for the same length of time. The first two are assigned to negative counter values so that the latter two can repeat using modular arithmetic. Turning off the engines resets the torch counter to torchCounterStart, i.e. -2 * torchFactor. */
+
+    this.torchFactor = 3; // units of 33 milliseconds
+    this.torchCounterStart = -2 * this.torchFactor;
+    this.torchCounter = this.torchCounterStart;
     dbPrint(this);
 }
 var drawBG = function(locX,locY,baseX,baseY) {
@@ -136,11 +140,19 @@ var drawPointer = function (x,y,self,enemy) {
     var dx = self.x - enemy.x;
     var dy = self.y - enemy.y;
     var angle = Math.atan2(-dx,dy);
+    var distanceWeight = 100;
+    var rawDisp = Math.sqrt(Math.pow(dx,2) + Math.pow(dy,2));
+    var cookedDisp = Math.floor(rawDisp / distanceWeight);
     dbPrint(angle);
-    // ctx.save();
     ctx.translate(self.viewX,self.viewY);
     ctx.rotate(angle);
     drawArrow(x,y, "rgba(255, 0, 0, 0.5)", 1,1);
+    ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+    ctx.translate(x,(y-20));
+    ctx.rotate(-angle);
+    ctx.fillText(cookedDisp,0,0);
+    ctx.rotate(angle);
+    ctx.translate(-x,-(y-20));
     ctx.rotate(-angle);
     ctx.translate(-self.viewX,-self.viewY);
 }
@@ -149,12 +161,20 @@ var drawHeading = function (x,y,self) {
     dbPrint("Drawing " + self.ID + "'s Heading");
     var angle = Math.atan2(self.vX,-self.vY);
     var speedWeight = 30; // empirical, basically magic
-    var speed = Math.sqrt(Math.pow(self.vX,2) + Math.pow(self.vY,2))
-    var magnitude = speed / speedWeight;
+    var rawSpeed = Math.sqrt(Math.pow(self.vX,2) + Math.pow(self.vY,2))
+    var magnitude = rawSpeed / speedWeight;
+    var displaySpeedWeight = 3.3;
+    var cookedSpeed = Math.floor(rawSpeed / displaySpeedWeight);
     dbPrint("vX = " + self.vX + ", vY = " + self.vY + ", angle = " + angle);
     ctx.translate(self.viewX,self.viewY);
     ctx.rotate(angle);
     drawArrow(x,y,"rgba(0, 255, 0, 0.5)",magnitude);
+    ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+    ctx.translate(x,(y-20));
+    ctx.rotate(-angle);
+    ctx.fillText(cookedSpeed,0,0);
+    ctx.rotate(angle);
+    ctx.translate(-x,-(y-20));
     ctx.rotate(-angle);
     ctx.translate(-self.viewX,-self.viewY);
 }
@@ -164,28 +184,33 @@ var drawAcceleration = function(x,y,self) {
     var angle = Math.atan2(self.aX,-self.aY);
     ctx.translate(self.viewX,self.viewY);
     ctx.rotate(angle);
-    dbPrint(self.ID + "'s torch cycle at " + self.torch);
-    if (self.torch < 4) 
+    dbPrint(self.ID + "'s torch cycle at " + self.torchCounter);
+    if (self.torchCounter < self.torchCounterStart)
+    {
+	// should never get here
+	self.torchCounter = self.torchCounterStart - 1; // added back at end
+    }
+    else if (self.torchCounter < -self.torchFactor)
     {
 	ctx.drawImage(burner,0,0,20,50,x-10,y,20,50);
-	self.torch++;
     }
-    else if (self.torch<8) 
+    else if (self.torchCounter < 0) 
     {
 	ctx.drawImage(burner,20,0,20,50,x-10,y,20,50);
-	self.torch++;
     }
-    else if (((self.torch % 8) + 4) < 12) 
+    else if (self.torchCounter < self.torchFactor) 
     {
 	ctx.drawImage(burner,40,0,20,50,x-10,y,20,50);
-	self.torch++;
     }
-    else if (((self.torch % 8) + 4) < 16) {
+    else if (self.torchCounter < 2 * self.torchFactor) 
+    {
 	ctx.drawImage(burner,60,0,20,50,x-10,y,20,50);
-	self.torch++;
     }
-    else {self.torch = 8;}
-    dbPrint("foo");
+    else {
+	// should never get here 
+	self.torchCounter = self.torchCounterStart - 1; // added back at end
+    }
+    self.torchCounter = (self.torchCounter + 1) % (2 * self.torchFactor);
     ctx.rotate(-angle);
     ctx.translate(-self.viewX,-self.viewY);
     
@@ -404,27 +429,15 @@ var updater = function() {
 
     if (Math.sqrt(Math.pow(A.aX,2) + Math.pow(A.aY,2)) !== 0) {
 	drawAcceleration(0,20,A);
-	A.torchShutoffCounter = 0;
     }
     else {
-	if (A.torchShutoffCounter < A.torchShutoffLimit) {
-	    A.torchShutoffCounter++;
-	}
-	else {
-	    A.torch = 0;
-	}
+	A.torchCounter = A.torchCounterStart;
     }
     if (Math.sqrt(Math.pow(B.aX,2) + Math.pow(B.aY,2)) !== 0) {
-	drawAcceleration(0,20,B);
-	B.torchShutoffCounter = 0;
+        drawAcceleration(0,20,B);
     }
     else {
-	if (A.torchShutoffCounter < A.torchShutoffLimit) {
-	    B.torchShutoffCounter++;
-	}
-	else {
-	    B.torch = 0;
-	}
+	B.torchCounter = B.torchCounterStart;
     }
 
 	
@@ -432,11 +445,11 @@ var updater = function() {
     ctx.drawImage(border,0,0,1200,600);
     ctx.fillStyle = "rgb(50, 60, 70)";
     ctx.fillRect(525,10,70,30);
-    drawScore(A,555,35);
+    drawScore(A,560,35);
     ctx.fillStyle = "rgb(50, 60, 70)";
     ctx.fillRect(605,10,70,30);
     drawScore(B,640,35);
-    ctx.fillStyle = "black";
+    ctx.fillStyle = "rgb(50, 60, 70)";
     ctx.fillRect(550,559,100,30);
     displayTime();
     gameTime += interval;
@@ -447,9 +460,8 @@ function drawScore(player,x,y) {
     ctx.font = "30px Arial";
     ctx.textAlign = "center";
     ctx.fillStyle = player.color;
-    ctx.strokeStyle = player.color;
     dbPrint(player.ID + "'s score is" + score);
-    ctx.strokeText(score,x,y);
+    ctx.fillText(score,x,y);
 }
 
 function onKeyDown(event) {
@@ -467,7 +479,7 @@ function displayTime() {
     ctx.font = "30px Arial"; // use 8-bit-y font
     ctx.textAlign = "center";
     ctx.fillStyle = "green";
-    ctx.strokeStyle = "green";
+    ctx.strokeStyle = "black";
     timeRemaining = timeLimit - gameTime;
     minRemaining = Math.floor(timeRemaining / 60000);
     if (minRemaining === 0) minRemaining = "";
@@ -475,9 +487,9 @@ function displayTime() {
     if (secRemaining < 10) secRemaining = "0" + secRemaining;
     timeString = minRemaining + ":" + secRemaining;
     dbPrint("Timer should read " + timeString);
+    ctx.fillText(timeString,595,585);
     ctx.strokeText(timeString,595,585);
 }
-
 
 function isGameOver() {
     return (gameTime >= timeLimit);
@@ -500,38 +512,94 @@ function roundedRect(x,y,width,height,radius){
     ctx.fill();
 }
 
-
 function gameOver() {
     dbPrint("Game over!");
     var winner;
-    var winnerString;
+    var winnerColor;
     if (A.score > B.score) {
-	winner = A;
-	winnerString = "Player " + A.ID;
+	winner = A.name;
+	winnerColor = A.color;
+	dbPrint("Winner's name is " + winner);
     }
     else if (B.score > A.score) {
-	winner = B;
-	winnerString = "Player " + B.ID;
+	winner = B.name;
+	winnerColor = B.color;
+	dbPrint("Winner's name is " + winner);
     }
     else {
-	winner = "None";
-	winnerString = "Nobody";
+	winner = "Nobody";
+	winnerColor = "rgb(20, 30, 40)";
+	dbPrint("Winner's name is "+ winner);
     }
-    winnerString += " wins!"
+    winner = winner + " wins!";
     ctx.font = "60px Arial"; // use 8-bit-y font
     ctx.textAlign = "center";
-    ctx.strokeStyle = "green";
-    if (winner === "None") ctx.fillStyle = "black";
-    else ctx.fillStyle = winner.color;
+    ctx.strokeStyle = "white";
+    dbPrint("Winner is " + winner + ", " + A.score + " to " + B.score);
+    dbPrint("Winner is supposed to be printed as " + winner);
+    ctx.fillStyle = "rgb(20, 30, 40)";
     ctx.fillRect(0,0,screenWidth,screenHeight);
-    ctx.fillStyle = "rgb(50, 60, 70)";
+    ctx.fillStyle = "rgb(180,180,200)"
     roundedRect(150,75,900,450,30);
-    ctx.strokeText(winnerString, screenWidth/2, screenHeight/2);
+    ctx.fillStyle = winnerColor;
+    roundedRect(175,100,850,400,30);
+    ctx.strokeText(winner, screenWidth/2, screenHeight/2);
+}
+var updaterLoadScreen=function(){
+		ctx.drawImage(loadscreen,0,0);
+}
+var loadOff=function() {
+    ctx.fillRect(0,0,1200,600);
+    screen=1;
+    textPlayer1 = document.getElementById("player1");
+    textPlayer1.style.visibility="hidden";
+    textPlayer2 = document.getElementById("player2");
+    textPlayer2.style.visibility="hidden";
+    textPlayer1m = document.getElementById("player1mass");
+    textPlayer1m.style.visibility="hidden";
+    textPlayer2m = document.getElementById("player2mass");
+    textPlayer2m.style.visibility="hidden";
+    button = document.getElementById("button1");
+    button.style.visibility="hidden";
+    if (textPlayer1.value === "Insert name") {
+	A.name = "Player 1";
+    }
+    else {
+	A.name = textPlayer1.value;
+    }
+    if (textPlayer2.value === "Insert name") {
+        B.name = "Player 2";
+    }
+    else {
+	B.name = textPlayer2.value;
+    }
+    A.radius=eval(textPlayer1m.value);
+    B.radius=eval(textPlayer2m.value);
+    A.mass=massDensity*Math.PI*Math.pow(A.radius,2);
+    B.mass=massDensity*Math.PI*Math.pow(B.radius,2);
+    A.a=500/A.mass;
+    B.a=500/B.mass;
+    canvas.setAttribute('tabindex','0');
+    canvas.focus();
+	
+}
+var screenManager= function(){
+	
+	switch (screen) {
+		case 0: { updaterLoadScreen();
+		break;
+		}
+		case 1: { updater();
+		break;
+		}
+	}
+	
 }
 
 function main() {
     debugMode = true;
     canvas = document.getElementById("myCanvas");
+	
     ctx = canvas.getContext("2d");
     tempctx = canvas.getContext("2d");
     intervalCounter = 0;
@@ -540,17 +608,20 @@ function main() {
 
     canvas.addEventListener('keydown',onKeyDown,false);
     canvas.addEventListener('keyup',onKeyUp,false);
-    canvas.setAttribute('tabindex','0');
-    canvas.focus();
+    
 
     fieldWidth = 3000;
     fieldHeight = 3000;
     screenWidth = 1200;
     screenHeight = 600;
-    A = new player(100,2900,300,300,10,"A");
-    B = new player(2900,100,900,300,20,"B");
-    ABase = new Base(A,100);
-    BBase = new Base(B,100);
+    fieldOffset = 100;
+    drawOffset = 300;
+    A = new player(fieldOffset, fieldHeight - fieldOffset,
+		   drawOffset, screenHeight - drawOffset, 20, "A");
+    B = new player(fieldWidth - fieldOffset, fieldOffset,
+		   screenWidth - drawOffset, drawOffset, 20,"B");
+    ABase = new Base(A,fieldOffset);
+    BBase = new Base(B,fieldOffset);
     aF = new flag(A.x, A.y, A, B, "rgb(100, 0, 0)");
     bF = new flag(B.x, B.y, B, A, "rgb(0, 0, 100)");
     edgeSize = 50;
@@ -562,12 +633,16 @@ function main() {
     burner.src = "./assets/burner.png";
     border = new Image();
     border.src = "./assets/border.png";
+    loadscreen= new Image();
+    loadscreen.src= "./assets/loadscreen.png";
     dbPrint(background);
     gameTime = 0;
     /* millisecnds * seconds/minute * minutes */
     timeLimit = (1000) * (60) * (2);
     interval= 33;
-    intervalID = setInterval(updater, interval);
+    intervalID = setInterval(screenManager,interval);
+    
+    
 }
 
 main();
