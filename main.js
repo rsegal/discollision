@@ -3,7 +3,7 @@ function dbPrint(msg) {
 	console.log(msg);
     }
 }
-var massDensity=1;
+massDensity=1;
 var screen=0;
 var flag = function(initX,initY,player,enemy,color) {
     this.homeX = initX;
@@ -13,28 +13,25 @@ var flag = function(initX,initY,player,enemy,color) {
     this.player = player;
     this.color = color;
     this.enemy = enemy;
-	this.radius = 10;
+    this.radius = 10;
+    this.mass = massDensity * Math.PI * Math.pow(this.radius,2);
     this.stolen = false;
     this.drawFlag = function(viewer) { //flag rendering works, do not attempt to improve! 1 hour spent fixing
-		var x;
-		var y;
-		if (this.stolen === true) {
-			x = this.enemy.x;
-			y = this.enemy.y;
-			
-		}
-		else {
+	var x;
+	var y;
+	if (this.stolen === true) {
+	    x = this.enemy.x;
+	    y = this.enemy.y;	    
+	}
+	else {
 	    x = this.homeX;
 	    y = this.homeY;
-		
-		}
-		
-		var distX = x - viewer.x;
-		var distY = y - viewer.y;
-		//console.log("distX= ",distX," ; distY=",distY);
-		if (((distX)-this.radius<=250) && ((distY)-this.radius<=250) && ((distX)+this.radius>=-250) && ((distY)+this.radius>=-250)) {
+	}	
+	var distX = x - viewer.x;
+	var distY = y - viewer.y;
+	//console.log("distX= ",distX," ; distY=",distY);
+	if (((distX)-this.radius<=250) && ((distY)-this.radius<=250) && ((distX)+this.radius>=-250) && ((distY)+this.radius>=-250)) {
 	    drawDisc(distX+viewer.viewX,distY+viewer.viewY,this.radius,this.color);
-		
 		}
 	
     }
@@ -76,11 +73,16 @@ var drawBG = function(locX,locY,baseX,baseY) {
 }
 
 var drawEnemy = function(myShip,eShip,centerX,centerY) {
-	var distX=eShip.x-myShip.x;
-	var distY=eShip.y-myShip.y;
-	if (((distX)-eShip.radius<=250) && ((distY)-eShip.radius<=250) && ((distX)+eShip.radius>=-250) && ((distY)+eShip.radius>=-250)) {
-	    drawDisc(distX+centerX,distY+centerY,eShip.radius,eShip.color);
-		}
+    var distX=eShip.x-myShip.x;
+    var distY=eShip.y-myShip.y;
+    if ( (Math.abs(distX - eShip.radius) <= 250) && 
+	 (Math.abs(distY - eShip.radius) <= 250) )
+    {
+	
+	drawDisc(distX + centerX,distY + centerY,eShip.radius,eShip.color);
+	drawAcceleration(0, 20, eShip, 
+			 myShip.viewX + distX, myShip.viewY + distY)
+    }
 }
 
 //doCollision is physically correct and returns the ID of the collision winner
@@ -102,8 +104,6 @@ var doCollision = function (discA,discB) {
 	//console.log(discA.ID+ " momentum: " + Math.abs(discA.mass*u1) + " ,"+discB.ID+" momentum: ", +Math.abs(discB.mass*u2));
 	if (Math.abs(discA.mass*u1)>Math.abs(discB.mass*u2)) return discA.ID;
 	if (Math.abs(discA.mass*u1)<Math.abs(discB.mass*u2)) return discB.ID;
-	
-	
 }
 
 var checkCollision = function (discA,discB) {
@@ -162,58 +162,64 @@ var drawHeading = function (x,y,self) {
     var angle = Math.atan2(self.vX,-self.vY);
     var speedWeight = 30; // empirical, basically magic
     var rawSpeed = Math.sqrt(Math.pow(self.vX,2) + Math.pow(self.vY,2))
+    var epsilon = 3;
     var magnitude = rawSpeed / speedWeight;
     var displaySpeedWeight = 3.3;
     var cookedSpeed = Math.floor(rawSpeed / displaySpeedWeight);
-    dbPrint("vX = " + self.vX + ", vY = " + self.vY + ", angle = " + angle);
-    ctx.translate(self.viewX,self.viewY);
-    ctx.rotate(angle);
-    drawArrow(x,y,"rgba(0, 255, 0, 0.5)",magnitude);
-    ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
-    ctx.translate(x,(y-20));
-    ctx.rotate(-angle);
-    ctx.fillText(cookedSpeed,0,0);
-    ctx.rotate(angle);
-    ctx.translate(-x,-(y-20));
-    ctx.rotate(-angle);
-    ctx.translate(-self.viewX,-self.viewY);
+    if (cookedSpeed > epsilon) {
+	dbPrint("vX = " + self.vX + ", vY = " + self.vY + 
+		", angle = " + angle);
+	ctx.translate(self.viewX,self.viewY);
+	ctx.rotate(angle);
+	drawArrow(x,y,"rgba(0, 255, 0, 0.5)",magnitude);
+	ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+	ctx.translate(x,(y-20));
+	ctx.rotate(-angle);
+	ctx.fillText(cookedSpeed,0,0);
+	ctx.rotate(angle);
+	ctx.translate(-x,-(y-20));
+	ctx.rotate(-angle);
+	ctx.translate(-self.viewX,-self.viewY);
+    }
 }
 
-var drawAcceleration = function(x,y,self) {
-    dbPrint("Drawing " + self.ID + "'s Thrust");
-    var angle = Math.atan2(self.aX,-self.aY);
-    ctx.translate(self.viewX,self.viewY);
-    ctx.rotate(angle);
-    dbPrint(self.ID + "'s torch cycle at " + self.torchCounter);
-    if (self.torchCounter < self.torchCounterStart)
-    {
-	// should never get here
-	self.torchCounter = self.torchCounterStart - 1; // added back at end
+var drawAcceleration = function(x,y,self,viewX,viewY) {
+    console.log(self.ID + ": " + self.aX + "," + self.aY);
+    if (Math.sqrt(Math.pow(self.aX,2) + Math.pow(self.aY,2)) !== 0) {
+	dbPrint("Drawing " + self.ID + "'s Thrust");
+	var angle = Math.atan2(self.aX,-self.aY);
+	ctx.translate(viewX,viewY);
+	ctx.rotate(angle);
+	dbPrint(self.ID + "'s torch cycle at " + self.torchCounter);
+	if (self.torchCounter < self.torchCounterStart)
+	{
+	    // should never get here
+	    self.torchCounter = self.torchCounterStart - 1; //added back at end
+	}
+	else if (self.torchCounter < -self.torchFactor)
+	{
+	    ctx.drawImage(burner,0,0,20,50,x-10,y,20,50);
+	}
+	else if (self.torchCounter < 0) 
+	{
+	    ctx.drawImage(burner,20,0,20,50,x-10,y,20,50);
+	}
+	else if (self.torchCounter < self.torchFactor) 
+	{
+	    ctx.drawImage(burner,40,0,20,50,x-10,y,20,50);
+	}
+	else if (self.torchCounter < 2 * self.torchFactor) 
+	{
+	    ctx.drawImage(burner,60,0,20,50,x-10,y,20,50);
+	}
+	else {
+	    // should never get here 
+	    self.torchCounter = self.torchCounterStart - 1; //added back at end
+	}
+	self.torchCounter = (self.torchCounter + 1) % (2 * self.torchFactor);
+	ctx.rotate(-angle);
+	ctx.translate(-viewX,-viewY);
     }
-    else if (self.torchCounter < -self.torchFactor)
-    {
-	ctx.drawImage(burner,0,0,20,50,x-10,y,20,50);
-    }
-    else if (self.torchCounter < 0) 
-    {
-	ctx.drawImage(burner,20,0,20,50,x-10,y,20,50);
-    }
-    else if (self.torchCounter < self.torchFactor) 
-    {
-	ctx.drawImage(burner,40,0,20,50,x-10,y,20,50);
-    }
-    else if (self.torchCounter < 2 * self.torchFactor) 
-    {
-	ctx.drawImage(burner,60,0,20,50,x-10,y,20,50);
-    }
-    else {
-	// should never get here 
-	self.torchCounter = self.torchCounterStart - 1; // added back at end
-    }
-    self.torchCounter = (self.torchCounter + 1) % (2 * self.torchFactor);
-    ctx.rotate(-angle);
-    ctx.translate(-self.viewX,-self.viewY);
-    
 }
 var circle = function(cx,cy,radius) {
 	ctx.arc(cx,cy,radius,0,2*Math.PI, true);
@@ -233,11 +239,13 @@ var checkFlagPickUp=function(picker,pickee) {
 }
 
 var pickUpFlag=function(picker,pickee) {
-	pickee.stolen=true;
+    pickee.stolen=true;
+    picker.mass += pickee.mass;
 }
 
 var knockFlag=function(knockee) {
-	knockee.stolen=false;
+    knockee.stolen=false;
+    knockee.player.mass -= knockee.mass;
 }
 
 var Base=function(player,baseEdge) {
@@ -262,8 +270,9 @@ var checkFlagDropOff=function(dropper,dropee,dropsite) { //can't get the range r
 	if (((Math.abs(dropper.x-dropsite.x))<(dropsite.edge-dropper.radius))&&((Math.abs(dropper.y-dropsite.y))<(dropsite.edge-dropper.radius))&&(dropee.stolen)) FlagDropOff(dropper,dropee);
 }
 var FlagDropOff = function(dropper,dropee) {
-	dropee.stolen=false;
-	dropper.score++;
+    dropee.stolen=false;
+    dropper.score++;
+    dropper.mass -= droppee.mass;
 }
 var drawEdge= function(player) {
     var size = edgeSize; //50 pixels
@@ -414,12 +423,8 @@ var updater = function() {
 
     var epsilon = 10;
 
-    if (Math.sqrt(Math.pow(A.vX,2) + Math.pow(A.vY,2)) >= epsilon) {
-	drawHeading(0,-100,A);
-    }
-    if (Math.sqrt(Math.pow(B.vX,2) + Math.pow(B.vY,2)) >= epsilon) {
-        drawHeading(0,-100,B);
-    }
+    drawHeading(0,-100,A);
+    drawHeading(0,-100,B);
 
     dbPrint("A.aX = " + A.aX + ", A.aY = " + A.aY);
     dbPrint("B.aX = " + B.aX + ", B.aY = " + B.aY);
@@ -427,18 +432,9 @@ var updater = function() {
     dbPrint("A's torch shutoff: " + A.torchShutoffCounter + "/" + A.torchShutoffLimit);
     dbPrint("B's torch shutoff: " + B.torchShutoffCounter + "/" + B.torchShutoffLimit);
 
-    if (Math.sqrt(Math.pow(A.aX,2) + Math.pow(A.aY,2)) !== 0) {
-	drawAcceleration(0,20,A);
-    }
-    else {
-	A.torchCounter = A.torchCounterStart;
-    }
-    if (Math.sqrt(Math.pow(B.aX,2) + Math.pow(B.aY,2)) !== 0) {
-        drawAcceleration(0,20,B);
-    }
-    else {
-	B.torchCounter = B.torchCounterStart;
-    }
+    drawAcceleration(0, 20, A, A.viewX, A.viewY);
+    drawAcceleration(0, 20, B, B.viewX, B.viewY);
+    
 
 	
     //covering leaks
@@ -597,7 +593,7 @@ var screenManager= function(){
 }
 
 function main() {
-    debugMode = true;
+    debugMode = false;
     canvas = document.getElementById("myCanvas");
 	
     ctx = canvas.getContext("2d");
