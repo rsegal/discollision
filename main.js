@@ -439,6 +439,13 @@ var updater = function() {
 	
     //covering leaks
     ctx.drawImage(border,0,0,1200,600);
+
+    
+    drawGameInfo();
+    gameTime += interval;
+}
+
+function drawGameInfo() {
     ctx.fillStyle = "rgb(50, 60, 70)";
     ctx.fillRect(525,10,70,30);
     drawScore(A,560,35);
@@ -448,7 +455,6 @@ var updater = function() {
     ctx.fillStyle = "rgb(50, 60, 70)";
     ctx.fillRect(550,559,100,30);
     displayTime();
-    gameTime += interval;
 }
 
 function drawScore(player,x,y) {
