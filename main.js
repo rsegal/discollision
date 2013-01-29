@@ -3,7 +3,6 @@ function dbPrint(msg) {
 	console.log(msg);
     }
 }
-//var score = 
 var massDensity=1;
 var flag = function(initX,initY,player,enemy,color) {
     this.homeX = initX;
@@ -41,11 +40,11 @@ var flag = function(initX,initY,player,enemy,color) {
 }
 
 var player = function(initX,initY,viewX,viewY,size,player) {
-	this.score=0;
+    this.score=0;
     this.x = initX;
     this.y = initY;
-	this.homeX=initX;
-	this.homeY=initY;
+    this.homeX=initX;
+    this.homeY=initY;
     this.vX = 0;
     this.vY = 0;
     this.a = 0.5;
@@ -61,7 +60,7 @@ var player = function(initX,initY,viewX,viewY,size,player) {
     this.torch = 0;
     // delays erasing the torch visual effect
     this.torchShutoffCounter = 0;
-    this.torchShutoffLimit = 150; // units of 33 milliseconds
+    this.torchShutoffLimit = 75; // units of 33 milliseconds
     dbPrint(this);
 }
 var drawBG = function(locX,locY,baseX,baseY) {
@@ -237,11 +236,58 @@ var drawBase=function(onPlayer,drawnBase) {
 var checkFlagDropOff=function(dropper,dropee,dropsite) { //can't get the range right, too sleepy to fix
 	if (((Math.abs(dropper.x-dropsite.x))<(dropsite.edge-dropper.radius))&&((Math.abs(dropper.y-dropsite.y))<(dropsite.edge-dropper.radius))&&(dropee.stolen)) FlagDropOff(dropper,dropee);
 }
-var FlagDropOff=function(dropper,dropee) {
+var FlagDropOff = function(dropper,dropee) {
 	dropee.stolen=false;
 	dropper.score++;
 }
+var drawEdge= function(player) {
+    var size = edgeSize; //50 pixels
+    var displayRange = 250;
+    var displaySize = 2*displayRange;
+    var mapWidth = 3000; // a fact -> should be stored less locally and derived
+    var mapHeight = 3000; // similarly
+    var x;
+    var y;
+    var debugString = player.ID + " is near the ";
+    ctx.fillStyle = "rgba(100, 100, 100, 0.5)";
+    ctx.translate(player.viewX,player.viewY);
+    // left or right edges
+    if (player.x < (displayRange + size)) {
+	ctx.fillRect(-player.x, -displayRange, size, displaySize);
+	dbPrint(debugString + "left.");
+    }
+    else if (player.x > (mapWidth - (displayRange + size))) {
+	ctx.fillRect(mapWidth - player.x - size, -displayRange, size, displaySize);
+	dbPrint(debugString + "right.");
+    }
+    // top or bottom edges
+    if (player.y < (displayRange + size)) {
+	ctx.fillRect(-displayRange, -player.y, displaySize, size);
+	dbPrint(debugString + "top.");
+    }
+    else if (player.y > (mapHeight - (displayRange + size))) {
+	ctx.fillRect(-displayRange, mapHeight - player.y - size, displaySize, size);
+	dbPrint(debugString + "bottom.");
+    }
+    ctx.translate(-player.viewX,-player.viewY);
+}
+var edgeSlow = function(player) {
+    var size = edgeSize;
+    var mapWidth = 3000;
+    var mapHeight = 3000;
+    if ( (player.x < size) || (player.x > (mapWidth - size)) || 
+	 (player.y < size) || (player.y > (mapHeight - size)) ) {
+	player.vX *= (3/4);
+	player.vY *= (3/4);
+    }
+}
+
 var updater = function() {
+    dbPrint("Elapsed Time: " + (gameTime/1000));
+    if (isGameOver()) {
+	gameOver();
+	return 0;
+    }
     dbPrint(intervalCounter++);
     dbPrint(keys);
  
@@ -277,6 +323,9 @@ var updater = function() {
     B.x+=B.vX;
     B.y+=B.vY;
 
+    edgeSlow(A);
+    edgeSlow(B);
+
     dbPrint(A);
     dbPrint(aF);
     dbPrint(B);
@@ -292,43 +341,46 @@ var updater = function() {
     drawBG(A.x,A.y,50,50);
     drawBG(B.x,B.y,650,50);
 	
-	//Bases
-	drawBase(A,BBase);
-	drawBase(B,ABase);
-	drawBase(A,ABase);
-	drawBase(B,BBase);
-
+    //Bases
+    drawBase(A,BBase);
+    drawBase(B,ABase);
+    drawBase(A,ABase);
+    drawBase(B,BBase);
+    
+    // Speed-limiting edge around map
+    drawEdge(A);
+    drawEdge(B);
+    
     // Players
     drawDisc(A.viewX, A.viewY , A.radius, A.color);
     drawDisc(B.viewX, B.viewY , B.radius, B.color);
 
-	// Enemies if they should be visible
+    // Enemies if they should be visible
     drawEnemy(A,B,300,300);
     drawEnemy(B,A,900,300);
-	
+    
     // draws flags on top of players if applicable
     aF.drawFlag(A);
     aF.drawFlag(B);
     bF.drawFlag(A);
     bF.drawFlag(B);
 
- 
-
     // Draw borders and cover any enemy overlap
     ctx.strokeRect(50, 50, 500, 500);
     ctx.strokeRect(650, 50, 500, 500);
 	
-	checkFlagPickUp(A,bF);
-	checkFlagPickUp(B,aF);
-	
-	checkFlagDropOff(A,bF,ABase);
-	checkFlagDropOff(B,aF,BBase);
+    checkFlagPickUp(A,bF);
+    checkFlagPickUp(B,aF);
+    
+    checkFlagDropOff(A,bF,ABase);
+    checkFlagDropOff(B,aF,BBase);
 	
     var collision=checkCollision(A,B);
-	if (collision!="no collision") { if ((collision===A.ID)&&(aF.stolen)) knockFlag(aF);
-									if ((collision===B.ID)&&(bF.stolen)) knockFlag(bF);
-									}
-	
+    if (collision!="no collision") { 
+	if ((collision===A.ID)&&(aF.stolen)) knockFlag(aF);
+	if ((collision===B.ID)&&(bF.stolen)) knockFlag(bF);
+    }
+    
     checkWallCollision(A);
     checkWallCollision(B);
     
@@ -376,13 +428,28 @@ var updater = function() {
     }
 
 	
-	//covering leaks
-	ctx.fillStyle = "#111111";
-	ctx.fillRect(0,0,1200,50);
-	ctx.fillRect(0,0,50,600);
-	ctx.fillRect(550,0,100,600);
-	ctx.fillRect(1150,0,50,600);
-	ctx.fillRect(0,550,1200,50);
+    //covering leaks
+    ctx.drawImage(border,0,0,1200,600);
+    ctx.fillStyle = "rgb(50, 60, 70)";
+    ctx.fillRect(525,10,70,30);
+    drawScore(A,555,35);
+    ctx.fillStyle = "rgb(50, 60, 70)";
+    ctx.fillRect(605,10,70,30);
+    drawScore(B,640,35);
+    ctx.fillStyle = "black";
+    ctx.fillRect(550,559,100,30);
+    displayTime();
+    gameTime += interval;
+}
+
+function drawScore(player,x,y) {
+    score = player.score;
+    ctx.font = "30px Arial";
+    ctx.textAlign = "center";
+    ctx.fillStyle = player.color;
+    ctx.strokeStyle = player.color;
+    dbPrint(player.ID + "'s score is" + score);
+    ctx.strokeText(score,x,y);
 }
 
 function onKeyDown(event) {
@@ -394,12 +461,79 @@ function onKeyUp(event) {
     keys[event.keyCode] = 0;
     dbPrint(keys);
 }
+function displayTime() {
+    var timeRemaining;
+    var timeString;
+    ctx.font = "30px Arial"; // use 8-bit-y font
+    ctx.textAlign = "center";
+    ctx.fillStyle = "green";
+    ctx.strokeStyle = "green";
+    timeRemaining = timeLimit - gameTime;
+    minRemaining = Math.floor(timeRemaining / 60000);
+    if (minRemaining === 0) minRemaining = "";
+    secRemaining = Math.floor((timeRemaining % 60000) / 1000);
+    if (secRemaining < 10) secRemaining = "0" + secRemaining;
+    timeString = minRemaining + ":" + secRemaining;
+    dbPrint("Timer should read " + timeString);
+    ctx.strokeText(timeString,595,585);
+}
+
+
+function isGameOver() {
+    return (gameTime >= timeLimit);
+}
+
+/* from: 
+   https://developer.mozilla.org/en-US/docs/Canvas_tutorial/Drawing_shapes */
+function roundedRect(x,y,width,height,radius){
+    ctx.beginPath();
+    ctx.moveTo(x,y+radius);
+    ctx.lineTo(x,y+height-radius);
+    ctx.quadraticCurveTo(x,y+height,x+radius,y+height);
+    ctx.lineTo(x+width-radius,y+height);
+    ctx.quadraticCurveTo(x+width,y+height,x+width,y+height-radius);
+    ctx.lineTo(x+width,y+radius);
+    ctx.quadraticCurveTo(x+width,y,x+width-radius,y);
+    ctx.lineTo(x+radius,y);
+    ctx.quadraticCurveTo(x,y,x,y+radius);
+    ctx.stroke();
+    ctx.fill();
+}
+
+
+function gameOver() {
+    dbPrint("Game over!");
+    var winner;
+    var winnerString;
+    if (A.score > B.score) {
+	winner = A;
+	winnerString = "Player " + A.ID;
+    }
+    else if (B.score > A.score) {
+	winner = B;
+	winnerString = "Player " + B.ID;
+    }
+    else {
+	winner = "None";
+	winnerString = "Nobody";
+    }
+    winnerString += " wins!"
+    ctx.font = "60px Arial"; // use 8-bit-y font
+    ctx.textAlign = "center";
+    ctx.strokeStyle = "green";
+    if (winner === "None") ctx.fillStyle = "black";
+    else ctx.fillStyle = winner.color;
+    ctx.fillRect(0,0,screenWidth,screenHeight);
+    ctx.fillStyle = "rgb(50, 60, 70)";
+    roundedRect(150,75,900,450,30);
+    ctx.strokeText(winnerString, screenWidth/2, screenHeight/2);
+}
 
 function main() {
-    debugMode = false;
+    debugMode = true;
     canvas = document.getElementById("myCanvas");
     ctx = canvas.getContext("2d");
-	tempctx = canvas.getContext("2d");
+    tempctx = canvas.getContext("2d");
     intervalCounter = 0;
 
     keys = new Object;
@@ -409,19 +543,29 @@ function main() {
     canvas.setAttribute('tabindex','0');
     canvas.focus();
 
-    A = new player(2900,100,300,300,10,"A");
-    B = new player(100,2900,900,300,20,"B");
-	ABase = new Base(A,100);
-	BBase = new Base(B,100);
+    fieldWidth = 3000;
+    fieldHeight = 3000;
+    screenWidth = 1200;
+    screenHeight = 600;
+    A = new player(100,2900,300,300,10,"A");
+    B = new player(2900,100,900,300,20,"B");
+    ABase = new Base(A,100);
+    BBase = new Base(B,100);
     aF = new flag(A.x, A.y, A, B, "rgb(100, 0, 0)");
     bF = new flag(B.x, B.y, B, A, "rgb(0, 0, 100)");
+    edgeSize = 50;
     dbPrint(aF);
     dbPrint(bF);
     background = new Image();
     background.src = "./assets/starmap.jpg";
-	burner = new Image();
-	burner.src = "./assets/burner.png";
+    burner = new Image();
+    burner.src = "./assets/burner.png";
+    border = new Image();
+    border.src = "./assets/border.png";
     dbPrint(background);
+    gameTime = 0;
+    /* millisecnds * seconds/minute * minutes */
+    timeLimit = (1000) * (60) * (2);
     interval= 33;
     intervalID = setInterval(updater, interval);
 }
