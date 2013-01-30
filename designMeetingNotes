@@ -1,0 +1,20 @@
+Discollision
+15237 HW 1 
+Raphael Segal (rsegal) and Liran Sharir (lsharir)
+---------------------------------------------
+You need to make the desision for having pointers to the other player and
+each objective on the screen, or have a minimap. Each has their pros/cons
+as we discussed. You may want to rethink your scoring situation. I'm not
+sure if it will be too difficult for a player to get both flags at once to
+win. You may want to go with the more traditional way of scoring this game
+and time how long each player has the flag, and set some goal time to win
+(maybe 1-3 minutes?). -eakeller
+
+----------------------------------------------
+Checklist for how we handled suggestions:
+	- Implemented pointers, and not minimaps
+
+	- Went from a score when both flags are at base design to simply
+	running the opponents flag to your base no matter where yours is
+
+	- 2 Minute time limit

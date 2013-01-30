@@ -1,3 +1,10 @@
+/* 
+main.js
+Discollision
+15237-S13 Project 1
+Raphael Segal (rsegal) and Liran Sharir (lsharir)
+*/
+
 function dbPrint(msg) {
     if (debugMode) {
 	console.log(msg);
@@ -38,6 +45,7 @@ var flag = function(initX,initY,player,enemy,color) {
 }
 
 var player = function(initX,initY,viewX,viewY,size,player) {
+	this.sprite= new Image();
 	this.name="Anon";
     this.score=0;
     this.x = initX;
@@ -79,7 +87,8 @@ var drawEnemy = function(myShip,eShip,centerX,centerY) {
 	 (Math.abs(distY - eShip.radius) <= 250) )
     {
 	
-	drawDisc(distX + centerX,distY + centerY,eShip.radius,eShip.color);
+	drawDiscSprite(distX + centerX,distY + centerY,eShip.radius,eShip.color,eShip);
+	drawDiscSprite(distX + centerX,distY + centerY,eShip.radius,eShip.color,eShip);
 	drawAcceleration(0, 20, eShip, 
 			 myShip.viewX + distX, myShip.viewY + distY)
     }
@@ -113,13 +122,14 @@ var checkCollision = function (discA,discB) {
 }
 
 var checkWallCollision = function (disc) {
-	if (disc.x-disc.radius <= 0) {disc.vX=-disc.vX; }
-	if (disc.x+disc.radius >= 3000) {disc.vX=-disc.vX; }
-	if (disc.y-disc.radius <= 0) {disc.vY=-disc.vY; }
-	if (disc.y+disc.radius >= 3000) {disc.vY=-disc.vY; }
+	if (disc.x-disc.radius <= 0) {disc.vX=-0.85*disc.vX; }
+	if (disc.x+disc.radius >= 3000) {disc.vX=-0.85*disc.vX; }
+	if (disc.y-disc.radius <= 0) {disc.vY=-0.85*disc.vY; }
+	if (disc.y+disc.radius >= 3000) {disc.vY=-0.85*disc.vY; }
 }
 
 var drawArrow = function (x,y,color,scale) {
+	ctx.globalAlpha=0.2;
     ctx.beginPath();
     ctx.moveTo(x,y);
     ctx.lineTo(x + 40,y+25);
@@ -132,6 +142,7 @@ var drawArrow = function (x,y,color,scale) {
     ctx.fillStyle = color;
     //ctx.scale(scale,scale)
     ctx.fill();
+	ctx.globalAlpha=1;
     //ctx.scale(1/scale,1/scale);
 }
 
@@ -184,7 +195,7 @@ var drawHeading = function (x,y,self) {
 }
 
 var drawAcceleration = function(x,y,self,viewX,viewY) {
-    console.log(self.ID + ": " + self.aX + "," + self.aY);
+    //console.log(self.ID + ": " + self.aX + "," + self.aY);
     if (Math.sqrt(Math.pow(self.aX,2) + Math.pow(self.aY,2)) !== 0) {
 	dbPrint("Drawing " + self.ID + "'s Thrust");
 	var angle = Math.atan2(self.aX,-self.aY);
@@ -226,12 +237,21 @@ var circle = function(cx,cy,radius) {
 }
 
 var drawDisc = function(locX,locY,radius,color) {
-    ctx.beginPath();
+    
+	
+	
+	ctx.beginPath();
 //    ctx.fillRect(locX,locY,radius,radius)
     ctx.arc(locX,locY,radius,0,2*Math.PI, true);
     ctx.fillStyle = color;
     ctx.fill();
 }
+
+var drawDiscSprite = function(locX,locY,radius,color,player) {
+	ctx.drawImage(player.sprite,0,0,35,35,locX-player.radius,locY-player.radius,2*player.radius,2*player.radius);
+	
+}
+
 
 var checkFlagPickUp=function(picker,pickee) {
 	var d=Math.sqrt(Math.pow(picker.x-pickee.x,2)+Math.pow(picker.y-pickee.y,2));
@@ -274,7 +294,7 @@ var FlagDropOff = function(dropper,dropee) {
     dropper.score++;
     dropper.mass -= droppee.mass;
 }
-var drawEdge= function(player) {
+/*var drawEdge= function(player) {
     var size = edgeSize; //50 pixels
     var displayRange = 250;
     var displaySize = 2*displayRange;
@@ -304,8 +324,8 @@ var drawEdge= function(player) {
 	dbPrint(debugString + "bottom.");
     }
     ctx.translate(-player.viewX,-player.viewY);
-}
-var edgeSlow = function(player) {
+}*/
+/*var edgeSlow = function(player) {
     var size = edgeSize;
     var mapWidth = 3000;
     var mapHeight = 3000;
@@ -314,7 +334,7 @@ var edgeSlow = function(player) {
 	player.vX *= (3/4);
 	player.vY *= (3/4);
     }
-}
+}*/
 
 var updater = function() {
     dbPrint("Elapsed Time: " + (gameTime/1000));
@@ -346,10 +366,10 @@ var updater = function() {
     if (keys[40]) {B.aY += B.a} // Down Arrow
     
     // Resolve acceleration to new velocity
-    A.vX += A.aX;
-    A.vY += A.aY;
-    B.vX += B.aX;
-    B.vY += B.aY;
+    if (A.vX<40) A.vX += A.aX;
+    if (A.vY<40) A.vY += A.aY;
+    if (B.vX<40) B.vX += B.aX;
+    if (B.vY<40) B.vY += B.aY;
 
     // Resolve velocity to new position
     A.x+=A.vX;
@@ -357,8 +377,8 @@ var updater = function() {
     B.x+=B.vX;
     B.y+=B.vY;
 
-    edgeSlow(A);
-    edgeSlow(B);
+    /*edgeSlow(A);
+    edgeSlow(B);*/
 
     dbPrint(A);
     dbPrint(aF);
@@ -381,13 +401,13 @@ var updater = function() {
     drawBase(A,ABase);
     drawBase(B,BBase);
     
-    // Speed-limiting edge around map
+    /*// Speed-limiting edge around map
     drawEdge(A);
-    drawEdge(B);
+    drawEdge(B);*/
     
     // Players
-    drawDisc(A.viewX, A.viewY , A.radius, A.color);
-    drawDisc(B.viewX, B.viewY , B.radius, B.color);
+    drawDiscSprite(A.viewX, A.viewY , A.radius, A.color,A);
+    drawDiscSprite(B.viewX, B.viewY , B.radius, B.color,B);
 
     // Enemies if they should be visible
     drawEnemy(A,B,300,300);
@@ -637,6 +657,8 @@ function main() {
     border.src = "./assets/border.png";
     loadscreen= new Image();
     loadscreen.src= "./assets/loadscreen.png";
+	A.sprite.src ="./assets/player1.png";
+	B.sprite.src ="./assets/player2.png";
     dbPrint(background);
     gameTime = 0;
     /* millisecnds * seconds/minute * minutes */

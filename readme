@@ -1,0 +1,112 @@
+README - Discollision
+15237-S13 Project 1
+Raphael Segal (rsegal) and Liran Sharir (lsharir)
+
+Game idea: 1v1 Capture the Flag, with some caveats.
+Those caveats are:
+      - If you collide your ship with your opponent's and you have more 
+      momentum than him, you knock your flag out of his hands and send it back
+      to your base (if he had it), and get thrown off course besides.
+      
+      - To make that interesting, everyone gets a rocket with the same engine.
+      Players can choose bigger or smaller rockets. This changes their mass and
+      therefore acceleration, leading to different playstyles ranging from the
+      agile offense flag-runner to the hulking defenseman.
+      
+      - To make it intuitive, we made a homebrew implementation of real physics
+      for both the acceleration and the collisions.
+      
+Other design ideas:
+      - Loose retro/space aesthetic
+
+      - Minimal visual clutter
+
+Instructions:
+	1) Choose your name. Or don't, I'm not a cop. But unless you like
+	boooooring names like "Player 1" or "Player 2", put your name in.
+	2) Choose your ship size. By default, you have the medium-sized ship,
+	a balance of speed and mass. You can also choose the nimble small ship
+	or the freight train of a large ship. Because of the physics-based
+	gameplay, these choices work with very different styles of gameplay.
+	3) Play the game.
+	   3a) Win the game by scoring flags.
+	   3b) Pick up the enemy flag from the opposite corner of the map by
+	   running over it and then return it to your rectangular base
+	   3c) Use WASD or arrow keys to accelerate. Be careful, there's no
+	   friction except at the edges!
+	   3c) Collisions can make you drop a flag. Try and avoid collisions if
+	   you think the other guy will have more momentum.
+	   3d) The green arrow is what direction you're moving in and how fast
+	   3e) The red arrow is what direction your opponent is in and how far
+	   away they are
+
+Concepts from 15-237 in the implementation:
+	 -Javascript
+		- Output - the dbPrint() function at the top of the program 
+		with the debugMode variable in main() as well as temporary 
+		console.log() calls were essential to our debugging, because
+		Javascript doesn't stop your code unless there's a really big
+		problem, and sometimes not even then.
+
+		- Named functions - many elements of our code that were called
+		repeatedly were given their own functions
+
+		- Scopes and hoisting - care was taken to remember that unlike
+		real languages, Javascript doesn't have block scope.
+
+		- Function "objects" - our players, the flags, even the small
+		bases were all "objects" made of functions.
+		
+		- Optional Arguments - if you don't input your name, we give
+		your player the named "Player 1" or "Player 2", respectively.
+
+		- Arrays - Keyboard input was stored in a dictionary-like way
+		in an array to allow for smooth movement/input
+
+		- Math methods - the game was based on physics and rendered.
+		there was a lot of math.
+
+		- Strict equality and epsilons - there aren't ints, so we made
+		sure we were always using the most appropriate comparison.
+
+	 -Canvas
+		- The entire game was draw in Canvas, except for preloaded 
+		images.
+
+		- Circles - the players and flags
+
+		- Rectangles - the bases, the backgrounds for the scores and 
+		time, and part of the game over screen
+
+		- Rounded rectangles - the game over screen
+
+		- Loading and selecting parts of sprites for the exhaust 
+		animation
+		
+		- Custom shapes for the heading and opponent arrows using paths
+
+		- Dynamic text for score counters, timer, and the velocity and
+		 opponent arrows
+
+		- RGBA - relatively few of the colors draw were simple strings.
+
+		- Exciting rotations and transformations of the context to make
+		everything appear in the right place. The arrows and the thrust
+		animation all had to be drawn relative to the center of their
+		player, so it made significantly more sense to just move and 
+		rotate the context briefly instead of convert the coordinates.
+
+		- Keyboard events - the players control their characters using
+		WASD and arrow keys, respectively. On the implementation level,
+		all key presses are added to an array and key releases are
+		removed from that array. When the updater runs, it resolve the
+		total thrust (and therefore acceleration) on each ship based on
+		the keys pressed down.
+
+		- Timer intervals - the updater is the core of our code, and
+		runs at approximately 30 frames per second for a smooth
+		experience.
+	 -HTML
+		- Minimal HTML was used, mainly to allow people to select the 
+		size of their ship and give themselves a name. No HTML was used
+		for the game itself.
